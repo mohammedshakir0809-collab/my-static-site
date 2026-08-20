@@ -17,40 +17,32 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh """
-                    docker build \
-                        -t ${IMAGE_NAME}:${BUILD_NUMBER} \
-                        -t ${IMAGE_NAME}:latest .
+                bat """
+                    docker build -t %IMAGE_NAME%:%BUILD_NUMBER% -t %IMAGE_NAME%:latest .
                 """
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                sh """
-                    echo "\$DOCKERHUB_CREDENTIALS_PSW" | docker login \
-                        -u "\$DOCKERHUB_CREDENTIALS_USR" \
-                        --password-stdin
+                bat """
+                    echo %DOCKERHUB_CREDENTIALS_PSW% | docker login -u %DOCKERHUB_CREDENTIALS_USR% --password-stdin
 
-                    docker push ${IMAGE_NAME}:${BUILD_NUMBER}
-                    docker push ${IMAGE_NAME}:latest
+                    docker push %IMAGE_NAME%:%BUILD_NUMBER%
+                    docker push %IMAGE_NAME%:latest
                 """
             }
         }
 
         stage('Deploy Container') {
             steps {
-                sh """
-                    docker pull ${IMAGE_NAME}:latest
+                bat """
+                    docker pull %IMAGE_NAME%:latest
 
-                    docker stop ${CONTAINER_NAME} || true
-                    docker rm ${CONTAINER_NAME} || true
+                    docker stop %CONTAINER_NAME% 2>nul || exit /b 0
+                    docker rm %CONTAINER_NAME% 2>nul || exit /b 0
 
-                    docker run -d \
-                        -p 84:80 \
-                        --restart unless-stopped \
-                        --name ${CONTAINER_NAME} \
-                        ${IMAGE_NAME}:latest
+                    docker run -d -p 84:80 --restart unless-stopped --name %CONTAINER_NAME% %IMAGE_NAME%:latest
                 """
             }
         }
@@ -58,7 +50,9 @@ pipeline {
 
     post {
         always {
-            sh 'docker logout || true'
+            bat """
+                docker logout || exit /b 0
+            """
         }
     }
 }
