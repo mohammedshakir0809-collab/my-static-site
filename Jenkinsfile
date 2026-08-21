@@ -27,8 +27,8 @@ pipeline {
           sh """
             ssh -o StrictHostKeyChecking=no ec2-user@${EC2_HOST} '
               docker pull ${IMAGE_NAME}:latest &&
-              docker stop my-static-site ||a true &&
-              docker rm my-static-site || true a&&
+              docker stop my-static-site || true &&
+              docker rm my-static-site || true &&
               docker run -d -p 84:80 --restart unless-stopped --name my-static-site ${IMAGE_NAME}:latest
             '
           """
