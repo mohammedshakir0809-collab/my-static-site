@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('ef099e221526488ebf79929a62d76f5f')
         IMAGE_NAME = "shakir0809/my-static-site"
         CONTAINER_NAME = "my-static-site"
     }
@@ -12,6 +11,14 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Check Docker') {
+            steps {
+                bat 'where docker'
+                bat 'docker --version'
+                bat 'docker info'
             }
         }
 
@@ -25,12 +32,20 @@ pipeline {
 
         stage('Push to Docker Hub') {
             steps {
-                bat """
-                    echo %DOCKERHUB_CREDENTIALS_PSW% | docker login -u %DOCKERHUB_CREDENTIALS_USR% --password-stdin
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'ef099e221526488ebf79929a62d76f5f',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+                    bat """
+                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
 
-                    docker push %IMAGE_NAME%:%BUILD_NUMBER%
-                    docker push %IMAGE_NAME%:latest
-                """
+                        docker push %IMAGE_NAME%:%BUILD_NUMBER%
+                        docker push %IMAGE_NAME%:latest
+                    """
+                }
             }
         }
 
@@ -50,9 +65,7 @@ pipeline {
 
     post {
         always {
-            bat """
-                docker logout || exit /b 0
-            """
+            bat 'docker logout || exit /b 0'
         }
     }
 }
